@@ -15,6 +15,7 @@ use App\Models\Orgao;
 use App\Models\Pessoa;
 use App\Services\AuditLogger;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -105,6 +106,29 @@ class SiayResourceController extends Controller
         ]);
 
         return back()->with('success', "{$definition['singular']} atualizado(a).");
+    }
+
+    public function destroy(Request $request, string $module, string $record): RedirectResponse
+    {
+        $definition = $this->definition($module);
+        $this->authorizeModule($request, $definition['manage']);
+
+        /** @var class-string<Model> $model */
+        $model = $definition['model'];
+        $entry = $model::query()->findOrFail($record);
+
+        try {
+            $before = $entry->toArray();
+            $entry->delete();
+        } catch (QueryException) {
+            return back()->with('error', "{$definition['singular']} possui vinculos e nao pode ser excluido(a).");
+        }
+
+        AuditLogger::record($module.'_deleted', null, "{$definition['singular']} excluido(a).", [
+            'before' => $before,
+        ]);
+
+        return back()->with('success', "{$definition['singular']} excluido(a).");
     }
 
     /**

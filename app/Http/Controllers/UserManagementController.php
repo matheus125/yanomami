@@ -53,7 +53,7 @@ class UserManagementController extends Controller
 
         AuditLogger::record('user_created', $user, "Usuario {$user->name} criado.");
 
-        return back()->with('success', 'Usuario criado.');
+        return back()->with('success', "Usuario {$user->name} criado com sucesso.");
     }
 
     public function update(Request $request, User $user): RedirectResponse
@@ -75,18 +75,20 @@ class UserManagementController extends Controller
             'after' => $user->fresh()->toArray(),
         ]);
 
-        return back()->with('success', 'Usuario atualizado.');
+        return back()->with('success', "Usuario {$user->name} atualizado com sucesso.");
     }
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
-        abort_if($request->user()->is($user), 422, 'Voce nao pode desativar o proprio usuario.');
+        if ($request->user()->is($user)) {
+            return back()->with('error', 'Voce nao pode desativar o proprio usuario.');
+        }
 
         $user->forceFill(['active' => false])->save();
 
         AuditLogger::record('user_removed', $user, "Usuario {$request->user()->name} removeu/desativou {$user->name}.");
 
-        return back()->with('success', 'Usuario desativado para auditoria.');
+        return back()->with('success', "Usuario {$user->name} desativado com sucesso.");
     }
 
     /**

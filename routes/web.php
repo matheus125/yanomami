@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AccessProfileController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CaseController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SiayResourceController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
@@ -43,6 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/modulos/{module}', [SiayResourceController::class, 'index'])->name('resources.index');
     Route::post('/modulos/{module}', [SiayResourceController::class, 'store'])->name('resources.store');
     Route::put('/modulos/{module}/{record}', [SiayResourceController::class, 'update'])->name('resources.update');
+    Route::delete('/modulos/{module}/{record}', [SiayResourceController::class, 'destroy'])->name('resources.destroy');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

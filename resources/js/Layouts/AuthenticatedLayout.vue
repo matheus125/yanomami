@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
+import FlashMessages from '@/Components/FlashMessages.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
@@ -239,18 +240,7 @@ const navigation = computed(() =>
             </header>
 
             <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <div
-                    v-if="$page.props.flash.success"
-                    class="mb-4 rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
-                >
-                    {{ $page.props.flash.success }}
-                </div>
-                <div
-                    v-if="$page.props.flash.error"
-                    class="mb-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
-                >
-                    {{ $page.props.flash.error }}
-                </div>
+                <FlashMessages />
                 <slot />
             </main>
         </div>

@@ -46,6 +46,12 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'info' => fn () => $request->session()->get('info'),
+                'status' => fn () => match ($request->session()->get('status')) {
+                    'verification-link-sent' => 'Um novo link de verificacao foi enviado para seu email.',
+                    default => $request->session()->get('status'),
+                },
             ],
         ];
     }

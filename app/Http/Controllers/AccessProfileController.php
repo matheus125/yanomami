@@ -33,6 +33,6 @@ class AccessProfileController extends Controller
             'permissions' => $profile->permissions()->pluck('key')->all(),
         ]);
 
-        return back()->with('success', 'Permissoes atualizadas.');
+        return back()->with('success', "Permissoes do perfil {$profile->name} atualizadas com sucesso.");
     }
 }

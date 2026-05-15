@@ -182,10 +182,12 @@ const deactivate = (user) => {
                         <label class="block">
                             <span class="text-sm font-semibold text-gray-700">Senha</span>
                             <input v-model="form.password" type="password" class="mt-1 w-full rounded border-gray-300 text-sm focus:border-emerald-600 focus:ring-emerald-600" />
+                            <span v-if="form.errors.password" class="text-xs text-red-600">{{ form.errors.password }}</span>
                         </label>
                         <label class="block">
                             <span class="text-sm font-semibold text-gray-700">Confirmar senha</span>
                             <input v-model="form.password_confirmation" type="password" class="mt-1 w-full rounded border-gray-300 text-sm focus:border-emerald-600 focus:ring-emerald-600" />
+                            <span v-if="form.errors.password_confirmation" class="text-xs text-red-600">{{ form.errors.password_confirmation }}</span>
                         </label>
                     </div>
                     <label class="block">
@@ -194,6 +196,7 @@ const deactivate = (user) => {
                             <option value="">Selecione</option>
                             <option v-for="profile in profiles" :key="profile.id" :value="profile.id">{{ profile.name }}</option>
                         </select>
+                        <span v-if="form.errors.access_profile_id" class="text-xs text-red-600">{{ form.errors.access_profile_id }}</span>
                     </label>
                     <label class="block">
                         <span class="text-sm font-semibold text-gray-700">Orgao</span>
@@ -201,25 +204,30 @@ const deactivate = (user) => {
                             <option value="">Sem orgao</option>
                             <option v-for="orgao in orgaos" :key="orgao.id" :value="orgao.id">{{ orgao.nome_orgao }}</option>
                         </select>
+                        <span v-if="form.errors.orgao_id" class="text-xs text-red-600">{{ form.errors.orgao_id }}</span>
                     </label>
                     <div class="grid gap-4 sm:grid-cols-2">
                         <label class="block">
                             <span class="text-sm font-semibold text-gray-700">Cargo</span>
                             <input v-model="form.position" class="mt-1 w-full rounded border-gray-300 text-sm focus:border-emerald-600 focus:ring-emerald-600" />
+                            <span v-if="form.errors.position" class="text-xs text-red-600">{{ form.errors.position }}</span>
                         </label>
                         <label class="block">
                             <span class="text-sm font-semibold text-gray-700">Telefone</span>
                             <input v-model="form.phone" class="mt-1 w-full rounded border-gray-300 text-sm focus:border-emerald-600 focus:ring-emerald-600" />
+                            <span v-if="form.errors.phone" class="text-xs text-red-600">{{ form.errors.phone }}</span>
                         </label>
                     </div>
                     <label class="block">
                         <span class="text-sm font-semibold text-gray-700">Municipio</span>
                         <input v-model="form.municipio" :disabled="!canManageAll" class="mt-1 w-full rounded border-gray-300 text-sm focus:border-emerald-600 focus:ring-emerald-600 disabled:bg-gray-100" />
+                        <span v-if="form.errors.municipio" class="text-xs text-red-600">{{ form.errors.municipio }}</span>
                     </label>
                     <label class="flex items-center gap-3 rounded border border-gray-200 px-3 py-2">
                         <input v-model="form.active" type="checkbox" class="rounded border-gray-300 text-emerald-700 focus:ring-emerald-600" />
                         <span class="text-sm font-semibold text-gray-700">Usuario ativo</span>
                     </label>
+                    <span v-if="form.errors.active" class="text-xs text-red-600">{{ form.errors.active }}</span>
 
                     <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60" :disabled="form.processing">
                         <Save class="h-4 w-4" />

@@ -3,7 +3,7 @@ import Pagination from '@/Components/Pagination.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
-import { Edit, Plus, Save, Search, X } from 'lucide-vue-next';
+import { Edit, Plus, Save, Search, Trash2, X } from 'lucide-vue-next';
 
 const props = defineProps({
     moduleKey: String,
@@ -82,6 +82,19 @@ const submit = () => {
         onSuccess: () => startCreate(),
     });
 };
+
+const destroyRecord = (record) => {
+    if (confirm('Excluir este registro? Esta acao ficara registrada na auditoria.')) {
+        router.delete(route('resources.destroy', [props.moduleKey, record.id]), {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (editingRecord.value?.id === record.id) {
+                    startCreate();
+                }
+            },
+        });
+    }
+};
 </script>
 
 <template>
@@ -139,6 +152,7 @@ const submit = () => {
                                         <span v-else class="line-clamp-2">{{ optionLabel(field, record[field.name]) }}</span>
                                     </td>
                                     <td class="px-5 py-4 text-right">
+                                        <div class="flex justify-end gap-3">
                                         <button
                                             v-if="can.manage"
                                             type="button"
@@ -148,6 +162,16 @@ const submit = () => {
                                             <Edit class="h-4 w-4" />
                                             Editar
                                         </button>
+                                        <button
+                                            v-if="can.manage"
+                                            type="button"
+                                            class="inline-flex items-center gap-2 text-sm font-semibold text-red-700 hover:text-red-900"
+                                            @click="destroyRecord(record)"
+                                        >
+                                            <Trash2 class="h-4 w-4" />
+                                            Excluir
+                                        </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr v-if="records.data.length === 0">

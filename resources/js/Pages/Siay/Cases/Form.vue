@@ -90,6 +90,7 @@ const personLabel = (person) => person.nome_civil || person.nome_tradicional || 
                             <option>Em acompanhamento</option>
                             <option>Fechado</option>
                         </select>
+                        <span v-if="form.errors.status_caso" class="text-xs text-red-600">{{ form.errors.status_caso }}</span>
                     </label>
                     <label class="block">
                         <span class="text-sm font-semibold text-gray-700">Grau de risco</span>
@@ -98,11 +99,13 @@ const personLabel = (person) => person.nome_civil || person.nome_tradicional || 
                             <option>Medio</option>
                             <option>Baixo</option>
                         </select>
+                        <span v-if="form.errors.grau_risco" class="text-xs text-red-600">{{ form.errors.grau_risco }}</span>
                     </label>
                     <label class="flex items-center gap-3 rounded border border-gray-200 px-3 py-3">
                         <input v-model="form.sigiloso" type="checkbox" class="rounded border-gray-300 text-emerald-700 focus:ring-emerald-600" />
                         <span class="text-sm font-semibold text-gray-700">Caso sigiloso</span>
                     </label>
+                    <span v-if="form.errors.sigiloso" class="text-xs text-red-600">{{ form.errors.sigiloso }}</span>
                 </div>
 
                 <label class="mt-4 block">
@@ -125,6 +128,7 @@ const personLabel = (person) => person.nome_civil || person.nome_tradicional || 
                             <option value="">Selecione</option>
                             <option v-for="item in options.municipios" :key="item.id" :value="item.id">{{ item.nome_municipio }}</option>
                         </select>
+                        <span v-if="form.errors.municipio_id" class="text-xs text-red-600">{{ form.errors.municipio_id }}</span>
                     </label>
                     <label class="block">
                         <span class="text-sm font-semibold text-gray-700">Comunidade/Aldeia</span>
@@ -132,6 +136,7 @@ const personLabel = (person) => person.nome_civil || person.nome_tradicional || 
                             <option value="">Nao informada</option>
                             <option v-for="item in filteredCommunities" :key="item.id" :value="item.id">{{ item.nome_comunidade }}</option>
                         </select>
+                        <span v-if="form.errors.comunidade_id" class="text-xs text-red-600">{{ form.errors.comunidade_id }}</span>
                     </label>
                     <label class="block">
                         <span class="text-sm font-semibold text-gray-700">Orgao responsavel</span>
@@ -139,6 +144,7 @@ const personLabel = (person) => person.nome_civil || person.nome_tradicional || 
                             <option value="">Selecione</option>
                             <option v-for="item in options.orgaos" :key="item.id" :value="item.id">{{ item.nome_orgao }}</option>
                         </select>
+                        <span v-if="form.errors.orgao_responsavel_id" class="text-xs text-red-600">{{ form.errors.orgao_responsavel_id }}</span>
                     </label>
                     <label class="block">
                         <span class="text-sm font-semibold text-gray-700">Tecnico responsavel</span>
@@ -146,6 +152,7 @@ const personLabel = (person) => person.nome_civil || person.nome_tradicional || 
                             <option value="">Selecione</option>
                             <option v-for="item in options.users" :key="item.id" :value="item.id">{{ item.name }} - {{ item.email }}</option>
                         </select>
+                        <span v-if="form.errors.usuario_responsavel_id" class="text-xs text-red-600">{{ form.errors.usuario_responsavel_id }}</span>
                     </label>
                 </div>
             </section>
@@ -173,6 +180,8 @@ const personLabel = (person) => person.nome_civil || person.nome_tradicional || 
                         <button type="button" class="inline-flex items-center justify-center rounded border border-red-200 px-3 text-red-700 hover:bg-red-50" @click="removePerson(index)">
                             <Trash2 class="h-4 w-4" />
                         </button>
+                        <span v-if="form.errors[`pessoas.${index}.id`]" class="text-xs text-red-600 md:col-span-3">{{ form.errors[`pessoas.${index}.id`] }}</span>
+                        <span v-if="form.errors[`pessoas.${index}.papel_no_caso`]" class="text-xs text-red-600 md:col-span-3">{{ form.errors[`pessoas.${index}.papel_no_caso`] }}</span>
                     </div>
                     <p v-if="form.pessoas.length === 0" class="rounded bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
                         Nenhuma pessoa vinculada neste momento.
@@ -186,10 +195,12 @@ const personLabel = (person) => person.nome_civil || person.nome_tradicional || 
                     <label>
                         <span class="text-sm font-semibold text-gray-700">Motivo</span>
                         <input v-model="form.motivo_encerramento" class="mt-1 w-full rounded border-gray-300 text-sm focus:border-emerald-600 focus:ring-emerald-600" />
+                        <span v-if="form.errors.motivo_encerramento" class="text-xs text-red-600">{{ form.errors.motivo_encerramento }}</span>
                     </label>
                     <label>
                         <span class="text-sm font-semibold text-gray-700">Justificativa</span>
                         <textarea v-model="form.justificativa_encerramento" rows="3" class="mt-1 w-full rounded border-gray-300 text-sm focus:border-emerald-600 focus:ring-emerald-600" />
+                        <span v-if="form.errors.justificativa_encerramento" class="text-xs text-red-600">{{ form.errors.justificativa_encerramento }}</span>
                     </label>
                 </div>
             </section>
