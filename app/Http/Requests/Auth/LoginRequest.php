@@ -31,6 +31,7 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
+            'remember' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -43,10 +44,13 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+        $remember = config('auth.allow_remember_login', false) && $this->boolean('remember');
+
+        if (! Auth::attempt($this->only('email', 'password'), $remember)) {
+            RateLimiter::hit($this->throttleKey(), (int) config('auth.login_decay_seconds', 900));
             AuditLogger::record('login_failed', null, 'Tentativa de login falhou.', [
                 'email' => $this->string('email')->toString(),
+                'ip_address' => $this->ip(),
             ]);
 
             throw ValidationException::withMessages([
@@ -54,7 +58,7 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        if (! Auth::user()?->active) {
+        if (Auth::user()?->active === false) {
             AuditLogger::record('login_blocked', Auth::user(), 'Login bloqueado para usuario inativo.');
             Auth::logout();
 
@@ -73,13 +77,20 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        $maxAttempts = (int) config('auth.login_max_attempts', 5);
+
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), $maxAttempts)) {
             return;
         }
 
         event(new Lockout($this));
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
+        AuditLogger::record('login_rate_limited', null, 'Login bloqueado por excesso de tentativas.', [
+            'email' => $this->string('email')->toString(),
+            'ip_address' => $this->ip(),
+            'seconds' => $seconds,
+        ]);
 
         throw ValidationException::withMessages([
             'email' => trans('auth.throttle', [

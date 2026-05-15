@@ -284,4 +284,45 @@ class SiayCrudTest extends TestCase
             ]);
         }
     }
+
+    public function test_case_scoped_resources_can_not_be_updated_outside_visible_scope(): void
+    {
+        $profile = AccessProfile::where('slug', 'gestor-municipal')->firstOrFail();
+        $orgao = Orgao::firstOrFail();
+        $case = Caso::firstOrFail();
+
+        $municipalUser = User::factory()->create([
+            'access_profile_id' => $profile->id,
+            'orgao_id' => $orgao->id,
+            'municipio' => 'Barcelos',
+            'active' => true,
+        ]);
+
+        $attendance = Atendimento::create([
+            'caso_id' => $case->id,
+            'orgao_id' => $orgao->id,
+            'usuario_id' => $this->admin->id,
+            'tipo_atendimento' => 'Social',
+            'descricao' => 'Atendimento protegido por escopo.',
+            'data_atendimento' => now(),
+        ]);
+
+        $this->actingAs($municipalUser)
+            ->put(route('resources.update', ['atendimentos', $attendance]), [
+                'caso_id' => $case->id,
+                'pessoa_id' => null,
+                'orgao_id' => $orgao->id,
+                'tipo_atendimento' => 'Saude',
+                'data_atendimento' => '2026-05-15T11:00',
+                'descricao' => 'Tentativa indevida.',
+                'proximo_passo' => null,
+                'correcao_justificativa' => 'Tentativa indevida.',
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('atendimentos', [
+            'id' => $attendance->id,
+            'descricao' => 'Atendimento protegido por escopo.',
+        ]);
+    }
 }

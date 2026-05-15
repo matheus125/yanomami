@@ -12,7 +12,7 @@ class CheckPermission
     {
         $user = $request->user();
 
-        if (! $user || ! $user->active || ! $user->hasAnyPermission($permissions)) {
+        if (! $user || $user->active === false || ! $user->hasAnyPermission($permissions)) {
             abort(403, 'Acesso negado para este perfil.');
         }
 

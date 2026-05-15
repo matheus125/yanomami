@@ -114,4 +114,10 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    'login_max_attempts' => env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
+
+    'login_decay_seconds' => env('AUTH_LOGIN_DECAY_SECONDS', 900),
+
+    'allow_remember_login' => env('AUTH_ALLOW_REMEMBER_LOGIN', false),
+
 ];

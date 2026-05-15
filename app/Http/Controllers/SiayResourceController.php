@@ -72,6 +72,8 @@ class SiayResourceController extends Controller
             $data['usuario_id'] = $request->user()->id;
         }
 
+        $this->ensureCaseScopeIsVisible($request, $definition, $data['caso_id'] ?? null);
+
         if ($module === 'alertas') {
             $data['data_geracao'] ??= now();
         }
@@ -90,8 +92,10 @@ class SiayResourceController extends Controller
 
         /** @var class-string<Model> $model */
         $model = $definition['model'];
-        $entry = $model::query()->findOrFail($record);
+        $entry = $this->findRecordForRequest($request, $definition, $model, $record);
         $data = $request->validate($this->rules($definition['fields'], updating: true));
+
+        $this->ensureCaseScopeIsVisible($request, $definition, $data['caso_id'] ?? null);
 
         if ($module === 'atendimentos') {
             $data['corrigido_por_id'] = $request->user()->id;
@@ -115,7 +119,7 @@ class SiayResourceController extends Controller
 
         /** @var class-string<Model> $model */
         $model = $definition['model'];
-        $entry = $model::query()->findOrFail($record);
+        $entry = $this->findRecordForRequest($request, $definition, $model, $record);
 
         try {
             $before = $entry->toArray();
@@ -129,6 +133,37 @@ class SiayResourceController extends Controller
         ]);
 
         return back()->with('success', "{$definition['singular']} excluido(a).");
+    }
+
+    /**
+     * @param  array<string, mixed>  $definition
+     * @param  class-string<Model>  $model
+     */
+    private function findRecordForRequest(Request $request, array $definition, string $model, string $record): Model
+    {
+        $query = $model::query();
+
+        if ($definition['case_scoped'] ?? false) {
+            $query->whereIn('caso_id', Caso::query()->visibleTo($request->user())->select('id'));
+        }
+
+        return $query->findOrFail($record);
+    }
+
+    /**
+     * @param  array<string, mixed>  $definition
+     */
+    private function ensureCaseScopeIsVisible(Request $request, array $definition, ?string $caseId): void
+    {
+        if (! ($definition['case_scoped'] ?? false) || blank($caseId)) {
+            return;
+        }
+
+        abort_unless(
+            Caso::query()->visibleTo($request->user())->whereKey($caseId)->exists(),
+            403,
+            'Voce nao tem permissao para alterar registros deste caso.'
+        );
     }
 
     /**

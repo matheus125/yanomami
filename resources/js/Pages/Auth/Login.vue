@@ -14,6 +14,9 @@ defineProps({
     status: {
         type: String,
     },
+    allowRemember: {
+        type: Boolean,
+    },
 });
 
 const form = useForm({
@@ -69,7 +72,7 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>
 
-            <div class="mt-4 block">
+            <div v-if="allowRemember" class="mt-4 block">
                 <label class="flex items-center">
                     <Checkbox name="remember" v-model:checked="form.remember" />
                     <span class="ms-2 text-sm text-gray-600"
