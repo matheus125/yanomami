@@ -1,11 +1,12 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { AlertTriangle, ArrowRight, ClipboardList, Clock, FileWarning, Route, ShieldAlert } from 'lucide-vue-next';
+import { AlertTriangle, ArrowRight, ClipboardList, Clock, FileWarning, Route, ShieldAlert, Utensils } from 'lucide-vue-next';
 
 defineProps({
     stats: Object,
     riskBreakdown: Array,
+    foodInsecurityBreakdown: Array,
     recentCases: Array,
     urgentAlerts: Array,
 });
@@ -16,6 +17,13 @@ const riskClass = (risk) =>
         Medio: 'bg-amber-100 text-amber-800',
         Baixo: 'bg-emerald-100 text-emerald-800',
     })[risk] ?? 'bg-gray-100 text-gray-700';
+
+const foodInsecurityClass = (diagnosis) =>
+    ({
+        'Inseguranca Alimentar Leve': 'bg-yellow-100 text-yellow-800',
+        'Inseguranca Alimentar Moderada': 'bg-orange-100 text-orange-800',
+        'Inseguranca Alimentar Grave': 'bg-red-100 text-red-800',
+    })[diagnosis] ?? 'bg-gray-100 text-gray-700';
 </script>
 
 <template>
@@ -39,7 +47,7 @@ const riskClass = (risk) =>
             </div>
         </template>
 
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded border border-gray-200 bg-white p-5 shadow-sm">
                 <div class="flex items-center justify-between">
                     <p class="text-sm font-medium text-gray-500">Total de casos</p>
@@ -81,6 +89,13 @@ const riskClass = (risk) =>
                     <AlertTriangle class="h-5 w-5 text-rose-700" />
                 </div>
                 <p class="mt-3 text-3xl font-black text-gray-950">{{ stats.open_alerts }}</p>
+            </div>
+            <div class="rounded border border-gray-200 bg-white p-5 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm font-medium text-gray-500">Inseguranca alimentar grave</p>
+                    <Utensils class="h-5 w-5 text-red-700" />
+                </div>
+                <p class="mt-3 text-3xl font-black text-gray-950">{{ stats.food_insecurity_severe }}</p>
             </div>
         </div>
 
@@ -144,6 +159,17 @@ const riskClass = (risk) =>
                     </div>
                     <div v-if="urgentAlerts.length === 0" class="rounded bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
                         Nenhum alerta alto aberto.
+                    </div>
+                </div>
+
+                <h2 class="mt-6 font-bold text-gray-950">Inseguranca alimentar</h2>
+                <div class="mt-4 space-y-3">
+                    <div v-for="item in foodInsecurityBreakdown" :key="item.diagnostico" class="flex items-center justify-between rounded bg-gray-50 px-4 py-3">
+                        <span class="rounded px-2 py-1 text-xs font-bold" :class="foodInsecurityClass(item.diagnostico)">{{ item.diagnostico }}</span>
+                        <span class="text-lg font-black text-gray-950">{{ item.total }}</span>
+                    </div>
+                    <div v-if="foodInsecurityBreakdown.length === 0" class="rounded bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                        Sem diagnosticos registrados.
                     </div>
                 </div>
             </section>

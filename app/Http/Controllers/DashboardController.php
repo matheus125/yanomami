@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Alerta;
 use App\Models\Caso;
 use App\Models\Encaminhamento;
+use App\Models\QuestionarioInsegurancaAlimentar;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -35,7 +36,15 @@ class DashboardController extends Controller
                     ->whereIn('caso_id', (clone $visibleCases)->select('id'))
                     ->where('status_alerta', 'Aberto')
                     ->count(),
+                'food_insecurity_severe' => QuestionarioInsegurancaAlimentar::query()
+                    ->where('diagnostico', QuestionarioInsegurancaAlimentar::DIAGNOSTICO_GRAVE)
+                    ->count(),
             ],
+            'foodInsecurityBreakdown' => QuestionarioInsegurancaAlimentar::query()
+                ->selectRaw('diagnostico, count(*) as total')
+                ->groupBy('diagnostico')
+                ->orderByRaw("case diagnostico when 'Inseguranca Alimentar Leve' then 1 when 'Inseguranca Alimentar Moderada' then 2 else 3 end")
+                ->get(),
             'riskBreakdown' => Caso::query()
                 ->visibleTo($request->user())
                 ->selectRaw('grau_risco, count(*) as total')

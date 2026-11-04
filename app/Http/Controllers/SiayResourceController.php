@@ -14,10 +14,12 @@ use App\Models\Municipio;
 use App\Models\Orgao;
 use App\Models\Pessoa;
 use App\Services\AuditLogger;
+use App\Services\DiagnosticoInsegurancaAlimentarService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,6 +34,10 @@ class SiayResourceController extends Controller
         $model = $definition['model'];
         $query = $model::query();
 
+        if ($module === 'familias') {
+            $query->with('questionarioInsegurancaAlimentar');
+        }
+
         if ($definition['case_scoped'] ?? false) {
             $query->whereIn('caso_id', Caso::query()->visibleTo($request->user())->select('id'));
         }
@@ -44,6 +50,12 @@ class SiayResourceController extends Controller
             });
         }
 
+        if ($module === 'familias' && $request->filled('diagnostico')) {
+            $query->whereHas('questionarioInsegurancaAlimentar', function ($query) use ($request): void {
+                $query->where('diagnostico', $request->string('diagnostico')->toString());
+            });
+        }
+
         return Inertia::render('Siay/Resources/Index', [
             'moduleKey' => $module,
             'module' => [
@@ -52,7 +64,7 @@ class SiayResourceController extends Controller
                 'fields' => $this->fieldsWithOptions($request, $definition['fields']),
             ],
             'records' => $query->latest()->paginate(12)->withQueryString(),
-            'filters' => $request->only('search'),
+            'filters' => $request->only('search', 'diagnostico'),
             'can' => [
                 'manage' => $request->user()->hasAnyPermission($definition['manage']),
             ],
@@ -67,6 +79,7 @@ class SiayResourceController extends Controller
         /** @var class-string<Model> $model */
         $model = $definition['model'];
         $data = $request->validate($this->rules($definition['fields']));
+        $questionnaire = $module === 'familias' ? $this->validatedQuestionnaire($request) : null;
 
         if ($module === 'atendimentos') {
             $data['usuario_id'] = $request->user()->id;
@@ -79,6 +92,10 @@ class SiayResourceController extends Controller
         }
 
         $record = $model::create($data);
+
+        if ($record instanceof Familia && $questionnaire) {
+            $this->saveQuestionnaire($record, $questionnaire);
+        }
 
         AuditLogger::record($module.'_created', $record, "{$definition['singular']} criado(a).");
 
@@ -94,6 +111,7 @@ class SiayResourceController extends Controller
         $model = $definition['model'];
         $entry = $this->findRecordForRequest($request, $definition, $model, $record);
         $data = $request->validate($this->rules($definition['fields'], updating: true));
+        $questionnaire = $module === 'familias' ? $this->validatedQuestionnaire($request) : null;
 
         $this->ensureCaseScopeIsVisible($request, $definition, $data['caso_id'] ?? null);
 
@@ -103,6 +121,10 @@ class SiayResourceController extends Controller
 
         $before = $entry->getOriginal();
         $entry->update($data);
+
+        if ($entry instanceof Familia && $questionnaire) {
+            $this->saveQuestionnaire($entry, $questionnaire);
+        }
 
         AuditLogger::record($module.'_updated', $entry, "{$definition['singular']} atualizado(a).", [
             'before' => $before,
@@ -419,6 +441,75 @@ class SiayResourceController extends Controller
         }
 
         return $rules;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function validatedQuestionnaire(Request $request): ?array
+    {
+        if (! $request->has('questionario')) {
+            return null;
+        }
+
+        $yesNo = ['Sim', 'Nao'];
+        $hasOtherFactor = in_array('Outros', (array) $request->input('questionario.fatores_limitantes', []), true);
+        $hasOtherProgram = in_array('Outros', (array) $request->input('questionario.programas_assistencia', []), true);
+        $hasOtherMarket = in_array('Outros', (array) $request->input('questionario.locais_compra', []), true);
+        $hasOtherDesiredFood = in_array('Outros', (array) $request->input('questionario.alimentos_desejados', []), true);
+
+        return $request->validate([
+            'questionario' => ['required', 'array'],
+            'questionario.refeicoes_semana' => ['required', Rule::in(['1 vez', '2 vezes', '3 vezes', '4 vezes', '5 vezes', '6 vezes', '7 vezes'])],
+            'questionario.refeicoes_dia' => ['required', Rule::in(['1 vez ao dia', '2 vezes ao dia', '3 vezes ao dia', '4 vezes ao dia', '5 vezes ou mais', 'Nenhuma'])],
+            'questionario.preocupacao_falta_comida' => ['required', Rule::in(['Diariamente', 'Semanalmente', 'Apenas 1 vez ao mes', 'Raramente', 'Nunca'])],
+            'questionario.reduziu_porcoes' => ['required', Rule::in(['Sim', 'Nao', 'Frequentemente'])],
+            'questionario.fatores_limitantes' => ['nullable', 'array'],
+            'questionario.fatores_limitantes.*' => [Rule::in(['Falta de dinheiro', 'Falta de transporte', 'Falta de tempo para cozinhar', 'Falta de opcoes de alimentos saudaveis na regiao', 'Outros'])],
+            'questionario.fatores_limitantes_outros' => [Rule::requiredIf($hasOtherFactor), 'nullable', 'string'],
+            'questionario.programas_assistencia' => ['nullable', 'array'],
+            'questionario.programas_assistencia.*' => [Rule::in(['Bancos de alimentos', 'Programas de alimentacao escolar', 'Recebimento de cestas basicas', 'Cupons de alimentos', 'Outros'])],
+            'questionario.programas_assistencia_outros' => [Rule::requiredIf($hasOtherProgram), 'nullable', 'string'],
+            'questionario.locais_compra' => ['nullable', 'array'],
+            'questionario.locais_compra.*' => [Rule::in(['Supermercados', 'Feiras', 'Tabernas', 'Outros'])],
+            'questionario.locais_compra_outros' => [Rule::requiredIf($hasOtherMarket), 'nullable', 'string'],
+            'questionario.alimentos_acessiveis' => ['required', Rule::in($yesNo)],
+            'questionario.frequencia_alimentos_baixo_custo' => ['required', Rule::in(['1 vez', '2 vezes', '3 vezes', '4 vezes', 'Acima de 4 vezes', 'Nunca'])],
+            'questionario.alimentos_desejados' => ['nullable', 'array'],
+            'questionario.alimentos_desejados.*' => [Rule::in(['Leites e derivados', 'Carnes e ovos', 'Oleos e margarinas', 'Cereais e leguminosas', 'Hortalicas e frutas', 'Outros'])],
+            'questionario.alimentos_desejados_outros' => [Rule::requiredIf($hasOtherDesiredFood), 'nullable', 'string'],
+            'questionario.situacao_financeira_afeta' => ['required', Rule::in($yesNo)],
+            'questionario.participa_associacao' => ['required', Rule::in($yesNo)],
+            'questionario.associacao_qual' => ['nullable', 'required_if:questionario.participa_associacao,Sim', 'string'],
+        ])['questionario'];
+    }
+
+    /**
+     * @param  array<string, mixed>  $questionnaire
+     */
+    private function saveQuestionnaire(Familia $familia, array $questionnaire): void
+    {
+        foreach ([
+            'fatores_limitantes' => 'fatores_limitantes_outros',
+            'programas_assistencia' => 'programas_assistencia_outros',
+            'locais_compra' => 'locais_compra_outros',
+            'alimentos_desejados' => 'alimentos_desejados_outros',
+        ] as $optionsKey => $otherKey) {
+            if (! in_array('Outros', (array) ($questionnaire[$optionsKey] ?? []), true)) {
+                $questionnaire[$otherKey] = null;
+            }
+        }
+
+        if (($questionnaire['participa_associacao'] ?? null) !== 'Sim') {
+            $questionnaire['associacao_qual'] = null;
+        }
+
+        $diagnosis = app(DiagnosticoInsegurancaAlimentarService::class)->calculate($questionnaire);
+
+        $familia->questionarioInsegurancaAlimentar()->updateOrCreate(
+            ['familia_id' => $familia->id],
+            array_merge($questionnaire, $diagnosis),
+        );
     }
 
     /**

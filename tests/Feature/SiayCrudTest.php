@@ -14,6 +14,7 @@ use App\Models\Familia;
 use App\Models\Municipio;
 use App\Models\Orgao;
 use App\Models\Pessoa;
+use App\Models\QuestionarioInsegurancaAlimentar;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -283,6 +284,101 @@ class SiayCrudTest extends TestCase
                 'id' => $record->id,
             ]);
         }
+    }
+
+    public function test_admin_can_create_update_list_and_delete_family_food_insecurity_questionnaire(): void
+    {
+        $comunidade = Comunidade::firstOrFail();
+
+        $createQuestionnaire = [
+            'refeicoes_semana' => '2 vezes',
+            'refeicoes_dia' => '1 vez ao dia',
+            'preocupacao_falta_comida' => 'Diariamente',
+            'reduziu_porcoes' => 'Frequentemente',
+            'fatores_limitantes' => ['Falta de dinheiro', 'Falta de transporte', 'Outros'],
+            'fatores_limitantes_outros' => 'Distancia da comunidade',
+            'programas_assistencia' => ['Recebimento de cestas basicas', 'Bancos de alimentos'],
+            'programas_assistencia_outros' => null,
+            'locais_compra' => ['Feiras', 'Outros'],
+            'locais_compra_outros' => 'Compra coletiva',
+            'alimentos_acessiveis' => 'Nao',
+            'frequencia_alimentos_baixo_custo' => 'Acima de 4 vezes',
+            'alimentos_desejados' => ['Leites e derivados', 'Carnes e ovos', 'Hortalicas e frutas', 'Outros'],
+            'alimentos_desejados_outros' => 'Peixes',
+            'situacao_financeira_afeta' => 'Sim',
+            'participa_associacao' => 'Sim',
+            'associacao_qual' => 'Associacao comunitaria piloto',
+        ];
+
+        $this->actingAs($this->admin)
+            ->post(route('resources.store', 'familias'), [
+                'referencia_familiar' => 'Familia Questionario',
+                'comunidade_id' => $comunidade->id,
+                'quantidade_membros' => 5,
+                'territorio' => 'Terra Indigena Yanomami',
+                'situacao_vulnerabilidade' => 'Alta',
+                'observacoes' => 'Cadastro com questionario.',
+                'questionario' => $createQuestionnaire,
+            ])
+            ->assertRedirect();
+
+        $familia = Familia::where('referencia_familiar', 'Familia Questionario')->firstOrFail();
+        $questionario = $familia->questionarioInsegurancaAlimentar()->firstOrFail();
+
+        $this->assertSame(29, $questionario->pontuacao_total);
+        $this->assertSame(QuestionarioInsegurancaAlimentar::DIAGNOSTICO_GRAVE, $questionario->diagnostico);
+        $this->assertSame(['Falta de dinheiro', 'Falta de transporte', 'Outros'], $questionario->fatores_limitantes);
+
+        $this->actingAs($this->admin)
+            ->get(route('resources.index', ['familias', 'diagnostico' => QuestionarioInsegurancaAlimentar::DIAGNOSTICO_GRAVE]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('records.data.0.questionario_inseguranca_alimentar.diagnostico', QuestionarioInsegurancaAlimentar::DIAGNOSTICO_GRAVE)
+            );
+
+        $updateQuestionnaire = [
+            'refeicoes_semana' => '7 vezes',
+            'refeicoes_dia' => '3 vezes ao dia',
+            'preocupacao_falta_comida' => 'Nunca',
+            'reduziu_porcoes' => 'Nao',
+            'fatores_limitantes' => [],
+            'fatores_limitantes_outros' => null,
+            'programas_assistencia' => [],
+            'programas_assistencia_outros' => null,
+            'locais_compra' => ['Supermercados'],
+            'locais_compra_outros' => null,
+            'alimentos_acessiveis' => 'Sim',
+            'frequencia_alimentos_baixo_custo' => 'Nunca',
+            'alimentos_desejados' => [],
+            'alimentos_desejados_outros' => null,
+            'situacao_financeira_afeta' => 'Nao',
+            'participa_associacao' => 'Nao',
+            'associacao_qual' => null,
+        ];
+
+        $this->actingAs($this->admin)
+            ->put(route('resources.update', ['familias', $familia]), [
+                'referencia_familiar' => 'Familia Questionario Atualizada',
+                'comunidade_id' => $comunidade->id,
+                'quantidade_membros' => 6,
+                'territorio' => 'Terra Indigena Yanomami',
+                'situacao_vulnerabilidade' => 'Media',
+                'observacoes' => 'Cadastro atualizado.',
+                'questionario' => $updateQuestionnaire,
+            ])
+            ->assertRedirect();
+
+        $questionario->refresh();
+        $this->assertSame(0, $questionario->pontuacao_total);
+        $this->assertSame(QuestionarioInsegurancaAlimentar::DIAGNOSTICO_LEVE, $questionario->diagnostico);
+
+        $this->actingAs($this->admin)
+            ->delete(route('resources.destroy', ['familias', $familia]))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('tb_questionario_inseguranca_alimentar', [
+            'id' => $questionario->id,
+        ]);
     }
 
     public function test_case_scoped_resources_can_not_be_updated_outside_visible_scope(): void
